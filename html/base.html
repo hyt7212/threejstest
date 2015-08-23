@@ -34,6 +34,9 @@
 
         //创建场景
         scene = new THREE.Scene();
+        //雾化效果
+//        scene.fog = new THREE.Fog(0xffffff, 0.015, 100); //颜色、近处值、远处值
+        scene.fog = new THREE.FogExp2(0xffffff, 0.015); //颜色、浓度
 
         //创建透视相机
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
