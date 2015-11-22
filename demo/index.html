@@ -12,11 +12,16 @@
             overflow: hidden;
         }
 
-        a { color: skyblue }
+        a {
+            color: skyblue;
+        }
     </style>
     <script src="../libs/three.js"></script>
     <script src="../libs/stats.js"></script>
     <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/collada/Animation.js"></script>
+    <script src="../libs/collada/AnimationHandler.js"></script>
+    <script src="../libs/collada/KeyFrameAnimation.js"></script>
     <script src="../libs/ColladaLoader.js"></script>
     <!--<script src="../libs/OBJLoader.js"></script>-->
     <!--<script src="../libs/OBJMTLLoader.js"></script>-->
@@ -27,24 +32,63 @@
 
 <script>
     var scene = new THREE.Scene();
-    var stats;
+    var stats, camera, renderer;
+    var clock = new THREE.Clock();
+    //创建相机
+    camera = new THREE.PerspectiveCamera( 25, window.innerWidth / window.innerHeight, 1, 10000 );
+    camera.position.set( -5, -5, 5 );
+    camera.up.set( 0, 0, 1 );
+//    camera.lookAt(scene.position);
+    //相机控制
+    var controls = new THREE.OrbitControls(camera);
+    controls.addEventListener('change', render);
+    //创建光源
+//    var light = new THREE.PointLight(0xffffff);
+//    light.position.set(300, 400, 200);
+//    scene.add(light);
+//
+    scene.add(new THREE.AmbientLight(0x333333));
+    var light = new THREE.DirectionalLight( 0xffffff, 1.5 );
+    light.position.set( 0, -4, -4 ).normalize();
+    scene.add( light );
+    //创建渲染
+    renderer = new THREE.WebGLRenderer();
+//    renderer.setClearColor( 0xfff4e5 );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.sortObjects = false;
+    document.body.appendChild(renderer.domElement);
+    //初始化帧数显示
+    stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.top = '0px';
+    document.body.appendChild(stats.domElement);
+
     //创建几何体
-    //    var geometry = new THREE.BoxGeometry(100, 100, 100);
-    //    var material = new THREE.MeshLambertMaterial({
-    //        color: 0xffffff,
-    //        map: THREE.ImageUtils.loadTexture('logo-webgl.png')
-    //    });
-    //    var mesh = new THREE.Mesh(geometry, material);
-    //    scene.add(mesh);
-    //加载obj模型
-    //    var loader = new THREE.JSONLoader();
-    //    loader.load( 'model/house.json', function ( geometry ) {
-    //        var mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial({color: 0x07624a}) );
-    //        mesh.position.x =0;
-    //        mesh.position.y =0;
-    //        mesh.position.z =0;
-    //        scene.add( mesh );
-    //    });
+    var geometry = new THREE.BoxGeometry(100, 100, 100);
+    var material = new THREE.MeshLambertMaterial({
+        color: 0xffffff,
+//        map: THREE.ImageUtils.loadTexture('logo-webgl.png')
+    });
+    var mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+    //加载dae
+    var loader = new THREE.ColladaLoader();
+    loader.load("./models/avatar.dae", function (collada) {
+        collada.scene.traverse(function (child) {
+
+            if (child instanceof THREE.SkinnedMesh) {
+
+                var animation = new THREE.Animation(child, child.geometry.animation);
+                animation.play();
+                camera.lookAt(child.position);
+            }
+
+        });
+
+        scene.add(collada.scene);
+
+    });
     // Skybox
     //    var path = "pisa/";
     //    var format = '.png';
@@ -71,39 +115,26 @@
     //
     //            mesh = new THREE.Mesh(new THREE.BoxGeometry(1000, 1000, 1000), material);
     //    scene.add(mesh);
-    //创建光源
-    var light = new THREE.PointLight(0xffffff);
-    light.position.set(300, 400, 200);
-    scene.add(light);
-
-    scene.add(new THREE.AmbientLight(0x333333));
-
-    //创建相机
-    var camera = new THREE.PerspectiveCamera(40, 800 / 600, 1, 2000);
-    camera.position.set(200, 200, 200);
-    camera.lookAt(scene.position);
-    //相机控制
-    var controls = new THREE.OrbitControls(camera);
-    controls.addEventListener('change', render);
-    //创建渲染
-    var renderer = new THREE.WebGLRenderer();
-    renderer.setSize(800, 600);
-    document.body.appendChild(renderer.domElement);
-    //初始化帧数显示
-    stats = new Stats();
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.top = '0px';
-    document.body.appendChild(stats.domElement);
 
     function animate() {
-        stats.update();
         requestAnimationFrame(animate);
+        THREE.AnimationHandler.update( clock.getDelta() );
+        stats.update();
         render();
     }
 
     function render() {
         renderer.render(scene, camera); //执行渲染
     }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener('resize', onWindowResize, false);
 
     animate();
 </script>
